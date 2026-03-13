@@ -65,30 +65,30 @@ response = client.messages.create(
     ]
 )
 
+print(f"Stop reason: {response.stop_reason}")
+print(f"Response: {response.content}")
 
 #Extract the tool call and execute it
 # Find the tool use block specifically
-tool_use_block = None
+tool_results = []
 for block in response.content:
     if block.type == "text":
         # Claude answered directly
         print(f"\nClaude's answer: {response.content[0].text}")
+    elif block.type == "tool_use":
+        if block.name == "calculate" :
+            tool_results.append({
+            "type" : "tool_result",
+            "tool_use_id" : block.id,
+            "content" : calculate(block.input["expression"])
+            })
+        elif block.name == "get_weather" :
+            tool_results.append({
+            "type" : "tool_result",
+            "tool_use_id" : block.id,    
+            "content" : get_weather(block.input["city"])
+            })
 
-    if block.type == "tool_use":
-        tool_use_block = block
-        break
-
-if tool_use_block:
-    # handle tool call
-    tool_name = tool_use_block.name
-    tool_input = tool_use_block.input
-    print(f"\nClaude wants to call: {tool_name}")
-    print(f"With input: {tool_input}")
-    result = calculate(tool_input["expression"])
-    print(f"Tool result: {result}")
-else:
-    # Claude answered directly
-    print(f"\nClaude's answer: {response.content[0].text}")
 
 
 # Send the result back to Claude
@@ -97,16 +97,11 @@ final_response = client.messages.create(
     max_tokens=1024,
     tools=tools,
     messages=[
-        {"role": "user", "content": "What is 1337 multiplied by 42?"},
+        {"role": "user", "content": "What is 1337 multiplied by 42 and what's the weather in Paris?"},
         {"role": "assistant", "content": response.content},
-        {"role": "user", "content": [
-            {
-                "type": "tool_result",
-                "tool_use_id": tool_use_block.id,
-                "content": result
-            }
-        ]}
+        {"role": "user", "content": tool_results}
     ]
 )
 
 print(f"\nClaude's final answer: {final_response.content[0].text}")
+
