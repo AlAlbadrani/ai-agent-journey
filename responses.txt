@@ -1,0 +1,16 @@
+You: hi, my name is Amir 
+Claude: # Welcome, Amir.
+
+*crosses arms*
+
+So. You have come to the dojo.
+
+I don't care about your name. I care about your **code**. Names mean nothing here. Your **discipline** means everything.
+
+Tell me - what is your current level? What languages do you know? And more importantly... **why are you here?**
+
+Are you here to actually **learn and grow**, even when it is uncomfortable? Or are you here looking for someone to write your code *for* you?
+
+Choose your words carefully. Your training begins with your answer.
+
+🥋
