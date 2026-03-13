@@ -20,7 +20,21 @@ tools = [
             },
             "required": ["expression"]
         }
+    }, 
+    {
+    "name": "get_weather",
+    "description": "Gets the current weather for a given city. Use this when the user asks about weather.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "city": {
+                "type": "string",
+                "description": "The city to get weather for e.g. 'London' or 'Paris'"
+            }
+        },
+        "required": ["city"]
     }
+}
 ]
 
 # The actual tool function 
@@ -31,6 +45,14 @@ def calculate(expression):
     except Exception as e:
         return f"Error: {str(e)}"
     
+def get_weather(city):
+    fake_weather = {
+        "london": "15°C, cloudy",
+        "paris": "18°C, sunny",
+        "new york": "22°C, partly cloudy",
+        "malmö": "10°C, windy"
+    }
+    return fake_weather.get(city.lower(), "Weather data not available for this city")
 
 # Send message with tools
 response = client.messages.create(
@@ -38,8 +60,8 @@ response = client.messages.create(
     max_tokens = 1024,
     tools = tools,
     messages = [
-        {"role" : "user" , "content" : "What is 1337 multiplied by 42?"},
-        {"role" : "user" , "content" : "What is the capital of France"}
+        {"role" : "user" , "content" : "What is the capital of France"},
+        {"role": "user", "content": "What is 1337 multiplied by 42 and what's the weather in Paris?"}
     ]
 )
 
