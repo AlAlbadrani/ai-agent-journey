@@ -38,11 +38,12 @@ def serialize_content(content):
                     
 
 def save_memory(conversation_history):
+    limited = conversation_history[-20:]
     serializable = []
-    for message in conversation_history:
+    for message in limited:
         serializable.append({
-            "role" : message["role"],
-            "content" : serialize_content(message["content"])
+            "role": message["role"],
+            "content": serialize_content(message["content"])
         })
     with open(MEMORY_FILE, "w") as f:
         json.dump(serializable, f, indent=2)
