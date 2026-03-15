@@ -1,5 +1,6 @@
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 
@@ -34,11 +35,25 @@ tools = [
             },
             "required": ["city"]
         }
+    },
+    {
+        "name": "get_joke",
+        "description": "Get random generated jokes from different categories.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "joke_type": {
+                    "type": "string",
+                    "description": "Joke typ. programming joke/dad joke/math joke"
+                }
+            },
+            "required": ["joke_type"]
+        }
     }
 ]
 
 # Tool functions
-def calculate(city):
+def calculate(expression):
     try:
         result = eval(expression)
         return str(result)
@@ -54,11 +69,44 @@ def get_weather(city):
     }
     return fake_weather.get(city.lower(), "Weather data not available for this city")
 
+def get_joke(joke_type):
+    joke_categories = {
+        "programming joke" : [
+            "Why do programmers prefer dark mode? Because light attracts bugs.",
+            "I give my programming jokes a C++",
+            "I tried to tell a dad joke to a function. But it didn’t get the reference."
+        ],
+        "dad joke" : [
+            "Why don't scientists trust atoms? Because they make up everything.",
+            "I'm such a good navigator, a self-driving car once asked me for directions.",
+            "My boss said “dress for the job you want, not for the job you have.” So I went in as Batman.",
+            "I went to the aquarium this weekend, but I didn’t stay long. There’s something fishy about that place."
+        ],
+        "math joke" : [
+           "Why was the math book sad? It had too many problems.",
+           "Hey, have you ever noticed what’s odd? Every other number!",
+           "Swimmers love one kind of math more than all others, what is it? Dive-ision!",
+           "Why was six afraid of seven? Because seven, eight, nine!"
+        ]
+    }
+
+    search_term = str(joke_type).lower().strip()
+    selected_list = joke_categories.get(search_term)
+
+    if selected_list:
+        return random.choice(selected_list)
+    else:
+        return "Category not found! Try 'programming jokes', 'dad jokes' or 'math jokes'"
+
+
 def execute_tool(name, input):
     if name == "calculate":
         return calculate(input["expression"])
     elif name == "get_weather":
         return get_weather(input["city"])
+    elif name == "get_joke":
+        requested_type = input.get("joke_type", "dad jokes") 
+        return get_joke(requested_type)
     else:
         return f"Unkown tool: {name}"
     
