@@ -129,20 +129,6 @@ tools = [
             },
             "required": ["challenge", "solution", "feedback", "score"]
         }
-    },
-    {
-        "name": "read_file",
-        "description": "Reads code from a file path provided by the user",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "filepath": {
-                    "type": "string",
-                    "description": "The path to the file e.g. /Users/amir/solution.py"
-                }
-            },
-            "required": ["filepath"]
-        }
     }
 ]
 
@@ -181,10 +167,11 @@ Your goal is NOT just to check if code works — your goal is to develop how the
 5. Wait for the user to submit their solution (code text or file path)
 6. If they provide a file path, use read_file to load it
     ## Tool usage rules:
-    - Call read_file ONCE to get the code, then immediately evaluate it in your response
-    - Never call read_file more than once per submission
-    -If read_file returns "File not found", tell the user immediatley and ask them to the path. Never retry read_file with the same path.
-    - After reading a file, proceed directly to giving feedback — do not call any more tools
+    - Only use get_progress when the user EXPLICITLY asks to see their progress or stats
+    - Only use save_progress when the user EXPLICITLY asks to save their progress
+    - NEVER call any tool during a normal greeting or conversation
+    - When a user greets you or says they want to submit a solution, just respond with text — no tools needed
+    - Tools are a last resort, not a first response
 7. Use evaluate_solution to review their code
 8. Give detailed feedback focusing on:
    - Does the solution work? Why or why not?
@@ -225,8 +212,6 @@ def run_agent(user_message):
             tools=tools,
             messages=conversation_history
         )
-
-        print(f"DEBUG - iteration {iteration}, stop_reason: {response.stop_reason}")
         
         if response.stop_reason == "end_turn":
             final_answer = response.content[0].text
@@ -245,9 +230,7 @@ def run_agent(user_message):
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":
-                    print(f"-> Using tool: {block.name}, input: {block.input}")
                     result = execute_tool(block.name, block.input)
-                    print(f"-> Result: {result[:100]}")  # first 100 chars
                     tool_results.append({
                         "type" : "tool_result",
                         "tool_use_id" : block.id,
@@ -260,18 +243,24 @@ def run_agent(user_message):
 
             conversation_history = load_memory()
 
-if conversation_history :
-    print(f"Welcome back! Ready to continue your coding journey?\n")
-else :
-    print("Welcome to your Code Challenge Agent! Let's build that programming mentality.\n")
+if __name__ == "__main__":
+    conversation_history = load_memory()
+    if conversation_history :
+        print(f"Welcome back! Ready to continue your coding journey?\n")
+    else :
+        print("Welcome to your Code Challenge Agent! Let's build that programming mentality.\n")
 
-print("Type 'quit' to exit, 'progress' to see your stats.\n")
-while True:
-    user_input = input("You: ")
-    if user_input.lower() == "quit":
-        print(f"Keep coding Amir! Goodbye! 💪")
-        break
-    response = run_agent(user_input)
-    print(f"\nCoach: {response}\n")
+    print("Type 'quit' to exit, 'progress' to see your stats.\n")
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == "quit":
+            print(f"Keep coding Amir! Goodbye! 💪")
+            break
+
+        if os.path.exists(user_input.strip()):
+            code = read_file(user_input.strip())
+            user_input = f"Here is my solution code:\n\n{code}"
+        response = run_agent(user_input)
+        print(f"\nCoach: {response}\n")
 
 
