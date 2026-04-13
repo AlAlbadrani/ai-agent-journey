@@ -2,14 +2,13 @@ import json
 import os 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from database import get_or_create_user, save_challenge, get_user_progress 
 
 
 
 load_dotenv()
 
 client = Anthropic()
-
-PROGRESS_FILE = "progress.json"
 
 
 MEMORY_FILE = "memory.json"
@@ -33,7 +32,7 @@ def serialize_content(content):
                         "name" : block.name,
                         "input" : block.input
                     })
-                elif block.type == "too_result":
+                elif block.type == "tool_result":
                     result.append(block)
             else:
                 result.append(block)
@@ -68,31 +67,14 @@ def read_file(filepath):
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
-def load_progress():
-    if os.path.exists(PROGRESS_FILE):
-        with open(PROGRESS_FILE, "r") as f:
-            return json.load(f)
-    return []
 
-def save_progress(challenge, solution, feedback, score):
-    progress = load_progress()
-    progress.append({
-        "challenge": challenge,
-        "solution": solution,
-        "feedback": feedback,
-        "score": score
-    })
-    with open(PROGRESS_FILE, "w") as f:
-        json.dump(progress, f, indent=2)
-    return "Progress saved!"
+def save_progress(user_name, language, level, subject, description, solution, feedback, score):
+    user_id = get_or_create_user(user_name)
+    return save_challenge(user_id, language, level, subject, description, solution, feedback, score)
 
-def get_progress():
-    progress = load_progress()
-    if not progress:
-        return "No challenges completed yet!"
-    total = len(progress)
-    avg_score = sum(int(p["score"]) for p in progress) / total
-    return f"Completed {total} challenges. Average score: {avg_score:.1f}/10"
+def get_progress(user_name):
+    user_id = get_or_create_user(user_name)
+    return get_user_progress(user_id)
 
 
 tools = [
@@ -101,7 +83,13 @@ tools = [
         "description": "Gets the user's challenge history and progress",
         "input_schema": {
             "type": "object",
-            "properties": {}
+            "properties": {
+                "user_name": {
+            "type": "string",
+            "description": "The name of the user"
+                }
+            },
+        "required": ["user_name"]
         }
     },
     {
@@ -110,13 +98,29 @@ tools = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "challenge": {
+                "user_name": {
                     "type": "string",
-                    "description": "The challenge that was given"
+                    "description": "The name of the user"
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Programming language used"
+                },
+                "level": {
+                    "type": "string",
+                    "description": "Challenge difficulty level"
+                },
+                "subject": {
+                    "type": "string",
+                    "description": "Topic of the challenge"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "The challenge description"
                 },
                 "solution": {
                     "type": "string",
-                    "description": "The user's solution"
+                    "description": "The user's solution code"
                 },
                 "feedback": {
                     "type": "string",
@@ -127,7 +131,7 @@ tools = [
                     "description": "Score out of 10"
                 }
             },
-            "required": ["challenge", "solution", "feedback", "score"]
+            "required": ["user_name", "language", "level", "subject", "description", "solution", "feedback", "score"]
         }
     }
 ]
@@ -137,13 +141,17 @@ def execute_tool(name,input):
         return read_file(input["filepath"])
     elif name == "save_progress":
         return save_progress(
-            input["challenge"],
+            input["user_name"],
+            input["language"],
+            input["level"],
+            input["subject"],
+            input["description"],
             input["solution"],
             input["feedback"],
-            input["score"],
+            input["score"]
         )
     elif name == "get_progress":
-        return get_progress()
+        return get_progress(input["user_name"])
     else:
         return f"Unkown tool: {name}"
 
@@ -240,8 +248,6 @@ def run_agent(user_message):
                 "role" : "user",
                 "content" : tool_results
             })
-
-            conversation_history = load_memory()
 
 if __name__ == "__main__":
     conversation_history = load_memory()
